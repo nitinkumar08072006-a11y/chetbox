@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CipherRoom | Encrypted 2-Person Chat</title>
+  <title>CipherRoom | Nitin Kumar (RGIPT)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { background: #0f172a; }
-    .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
+    .glass { background: rgba(30, 41, 59, 0.75); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
   </style>
@@ -17,21 +17,24 @@
   <!-- Authentication Panel -->
   <div id="auth-card" class="glass w-full max-w-md p-8 rounded-2xl shadow-2xl space-y-6">
     <div class="text-center">
-      <h1 class="text-3xl font-extrabold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">CipherRoom</h1>
-      <p class="text-slate-400 text-sm mt-1">End-to-End Encrypted 2-Person Messenger</p>
+      <span class="text-[11px] font-bold tracking-wider px-3 py-1 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 uppercase">
+        Developed by Nitin Kumar • RGIPT (2nd Year)
+      </span>
+      <h1 class="text-3xl font-extrabold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent mt-3">CipherRoom</h1>
+      <p class="text-slate-400 text-sm mt-1">End-to-End Encrypted Private Portal</p>
     </div>
 
     <div class="space-y-4">
       <div>
-        <label class="text-xs font-semibold uppercase text-slate-400">Room Name</label>
-        <input type="text" id="room" placeholder="e.g. secret-vault" class="w-full mt-1 px-4 py-3 bg-slate-900/80 rounded-xl border border-slate-700 focus:outline-none focus:border-cyan-500 text-sm transition" />
+        <label class="text-xs font-semibold uppercase text-slate-400">Room Name (ID)</label>
+        <input type="text" id="room" value="nitin123" placeholder="Enter Room ID" class="w-full mt-1 px-4 py-3 bg-slate-900/80 rounded-xl border border-slate-700 focus:outline-none focus:border-cyan-500 text-sm transition" />
       </div>
       <div>
         <label class="text-xs font-semibold uppercase text-slate-400">Shared Passphrase</label>
-        <input type="password" id="password" placeholder="••••••••••••" class="w-full mt-1 px-4 py-3 bg-slate-900/80 rounded-xl border border-slate-700 focus:outline-none focus:border-cyan-500 text-sm transition" />
+        <input type="password" id="password" value="kumar123" placeholder="••••••••••••" class="w-full mt-1 px-4 py-3 bg-slate-900/80 rounded-xl border border-slate-700 focus:outline-none focus:border-cyan-500 text-sm transition" />
       </div>
       <button onclick="joinRoom()" class="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 rounded-xl font-bold text-sm tracking-wide shadow-lg shadow-cyan-500/20 transition duration-200">
-        Enter Secure Room
+        Connect to Private Room
       </button>
     </div>
   </div>
@@ -41,7 +44,10 @@
     <!-- Header -->
     <div class="p-4 border-b border-slate-700/60 flex items-center justify-between">
       <div>
-        <h2 id="room-display" class="font-bold text-lg text-cyan-400"></h2>
+        <div class="flex items-center gap-2">
+          <h2 id="room-display" class="font-bold text-lg text-cyan-400"></h2>
+          <span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded border border-slate-700">RGIPT Secure Node</span>
+        </div>
         <span id="status-badge" class="text-xs px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-500/30">Waiting for peer...</span>
       </div>
       <button onclick="leaveRoom()" class="text-xs bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 px-3 py-1.5 rounded-lg transition">Disconnect</button>
@@ -63,14 +69,16 @@
     let cryptoKey = null;
     let activeRoom = '';
 
-    // SHA-256 Hash helper
+    // Fixed credentials defined according to project requirements
+    const ALLOWED_ROOM = "nitin123";
+    const ALLOWED_PASS = "kumar123";
+
     async function hashPass(password) {
       const msgUint8 = new TextEncoder().encode(password);
       const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
       return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
     }
 
-    // AES-256 Key Derivation
     async function deriveKey(password, saltStr) {
       const enc = new TextEncoder();
       const baseKey = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveKey"]);
@@ -87,11 +95,14 @@
       const room = document.getElementById('room').value.trim();
       const password = document.getElementById('password').value;
 
-      if (!room || !password) return alert('Provide both Room Name and Passphrase');
+      // Strict check for customized ID and Password
+      if (room !== ALLOWED_ROOM || password !== ALLOWED_PASS) {
+        return alert(`Access Denied! Only Room ID "${ALLOWED_ROOM}" and Password "${ALLOWED_PASS}" are authorized.`);
+      }
 
       activeRoom = room;
       const passwordHash = await hashPass(password);
-      cryptoKey = await deriveKey(password, room); // Salt derived from room name
+      cryptoKey = await deriveKey(password, room);
 
       socket.emit('join-room', { room, passwordHash });
     }
@@ -101,7 +112,7 @@
       document.getElementById('chat-card').classList.remove('hidden');
       document.getElementById('chat-card').classList.add('flex');
       document.getElementById('room-display').innerText = `# ${room}`;
-      appendSystemMessage('Room initialized. Encryption active.');
+      appendSystemMessage('Welcome Nitin! Secure session initialized with AES-256 encryption.');
     });
 
     socket.on('error-msg', (msg) => alert(msg));
@@ -111,11 +122,11 @@
       if (count === 2) {
         badge.className = "text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
         badge.innerText = "Encrypted Link Active (2/2)";
-        if (status === 'connected') appendSystemMessage('Peer connected.');
+        if (status === 'connected') appendSystemMessage('Peer connected to room nitin123.');
       } else {
         badge.className = "text-xs px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-500/30";
         badge.innerText = "Waiting for peer (1/2)...";
-        if (status === 'disconnected') appendSystemMessage('Peer disconnected.');
+        if (status === 'disconnected') appendSystemMessage('Peer left the chat.');
       }
     });
 
@@ -151,7 +162,7 @@
         const text = new TextDecoder().decode(decrypted);
         appendMessage('Peer', text, false);
       } catch (e) {
-        appendSystemMessage('Decryption error: Invalid passphrase match.');
+        appendSystemMessage('Decryption error: Failed to decode message.');
       }
     });
 
@@ -172,7 +183,7 @@
       container.appendChild(msgDiv);
       container.scrollTop = container.scrollHeight;
 
-      // Auto-destruct message from screen after 60 seconds
+      // Auto-destruct timer (60 seconds)
       setTimeout(() => {
         msgDiv.classList.add('opacity-0');
         setTimeout(() => msgDiv.remove(), 500);
