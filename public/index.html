@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CipherRoom | Encrypted 2-Person Chat</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background: #0f172a; }
+    .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+  </style>
+</head>
+<body class="text-slate-100 min-h-screen flex items-center justify-center p-4">
+
+  <!-- Authentication Panel -->
+  <div id="auth-card" class="glass w-full max-w-md p-8 rounded-2xl shadow-2xl space-y-6">
+    <div class="text-center">
+      <h1 class="text-3xl font-extrabold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">CipherRoom</h1>
+      <p class="text-slate-400 text-sm mt-1">End-to-End Encrypted 2-Person Messenger</p>
+    </div>
+
+    <div class="space-y-4">
+      <div>
+        <label class="text-xs font-semibold uppercase text-slate-400">Room Name</label>
+        <input type="text" id="room" placeholder="e.g. secret-vault" class="w-full mt-1 px-4 py-3 bg-slate-900/80 rounded-xl border border-slate-700 focus:outline-none focus:border-cyan-500 text-sm transition" />
+      </div>
+      <div>
+        <label class="text-xs font-semibold uppercase text-slate-400">Shared Passphrase</label>
+        <input type="password" id="password" placeholder="••••••••••••" class="w-full mt-1 px-4 py-3 bg-slate-900/80 rounded-xl border border-slate-700 focus:outline-none focus:border-cyan-500 text-sm transition" />
+      </div>
+      <button onclick="joinRoom()" class="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 rounded-xl font-bold text-sm tracking-wide shadow-lg shadow-cyan-500/20 transition duration-200">
+        Enter Secure Room
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Chat Panel -->
+  <div id="chat-card" class="glass w-full max-w-2xl h-[600px] rounded-2xl shadow-2xl flex-col hidden">
+    <!-- Header -->
+    <div class="p-4 border-b border-slate-700/60 flex items-center justify-between">
+      <div>
+        <h2 id="room-display" class="font-bold text-lg text-cyan-400"></h2>
+        <span id="status-badge" class="text-xs px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-500/30">Waiting for peer...</span>
+      </div>
+      <button onclick="leaveRoom()" class="text-xs bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 px-3 py-1.5 rounded-lg transition">Disconnect</button>
+    </div>
+
+    <!-- Messages Container -->
+    <div id="messages" class="flex-1 p-4 overflow-y-auto space-y-3"></div>
+
+    <!-- Input Bar -->
+    <div class="p-4 border-t border-slate-700/60 flex gap-2">
+      <input type="text" id="msg-input" placeholder="Type an encrypted message..." onkeydown="if(event.key==='Enter') sendMessage()" class="flex-1 px-4 py-3 bg-slate-900/80 rounded-xl border border-slate-700 focus:outline-none focus:border-cyan-500 text-sm transition" />
+      <button onclick="sendMessage()" class="px-6 py-3 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold rounded-xl text-sm transition">Send</button>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    let cryptoKey = null;
+    let activeRoom = '';
+
+    // SHA-256 Hash helper
+    async function hashPass(password) {
+      const msgUint8 = new TextEncoder().encode(password);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+      return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    // AES-256 Key Derivation
+    async function deriveKey(password, saltStr) {
+      const enc = new TextEncoder();
+      const baseKey = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveKey"]);
+      return crypto.subtle.deriveKey(
+        { name: "PBKDF2", salt: enc.encode(saltStr), iterations: 100000, hash: "SHA-256" },
+        baseKey,
+        { name: "AES-GCM", length: 256 },
+        false,
+        ["encrypt", "decrypt"]
+      );
+    }
+
+    async function joinRoom() {
+      const room = document.getElementById('room').value.trim();
+      const password = document.getElementById('password').value;
+
+      if (!room || !password) return alert('Provide both Room Name and Passphrase');
+
+      activeRoom = room;
+      const passwordHash = await hashPass(password);
+      cryptoKey = await deriveKey(password, room); // Salt derived from room name
+
+      socket.emit('join-room', { room, passwordHash });
+    }
+
+    socket.on('joined', ({ room }) => {
+      document.getElementById('auth-card').classList.add('hidden');
+      document.getElementById('chat-card').classList.remove('hidden');
+      document.getElementById('chat-card').classList.add('flex');
+      document.getElementById('room-display').innerText = `# ${room}`;
+      appendSystemMessage('Room initialized. Encryption active.');
+    });
+
+    socket.on('error-msg', (msg) => alert(msg));
+
+    socket.on('peer-status', ({ count, status }) => {
+      const badge = document.getElementById('status-badge');
+      if (count === 2) {
+        badge.className = "text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
+        badge.innerText = "Encrypted Link Active (2/2)";
+        if (status === 'connected') appendSystemMessage('Peer connected.');
+      } else {
+        badge.className = "text-xs px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-500/30";
+        badge.innerText = "Waiting for peer (1/2)...";
+        if (status === 'disconnected') appendSystemMessage('Peer disconnected.');
+      }
+    });
+
+    async function sendMessage() {
+      const input = document.getElementById('msg-input');
+      const text = input.value.trim();
+      if (!text) return;
+
+      const enc = new TextEncoder();
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const encrypted = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, cryptoKey, enc.encode(text));
+
+      appendMessage('You', text, true);
+
+      socket.emit('send-message', {
+        room: activeRoom,
+        payload: {
+          iv: Array.from(iv),
+          data: Array.from(new Uint8Array(encrypted))
+        }
+      });
+
+      input.value = '';
+    }
+
+    socket.on('receive-message', async (payload) => {
+      try {
+        const decrypted = await crypto.subtle.decrypt(
+          { name: "AES-GCM", iv: new Uint8Array(payload.iv) },
+          cryptoKey,
+          new Uint8Array(payload.data)
+        );
+        const text = new TextDecoder().decode(decrypted);
+        appendMessage('Peer', text, false);
+      } catch (e) {
+        appendSystemMessage('Decryption error: Invalid passphrase match.');
+      }
+    });
+
+    function appendMessage(sender, text, isSelf) {
+      const container = document.getElementById('messages');
+      const msgDiv = document.createElement('div');
+      msgDiv.className = `flex flex-col ${isSelf ? 'items-end' : 'items-start'} transition-opacity duration-500`;
+
+      const alignClass = isSelf ? 'bg-cyan-600 text-white rounded-br-none' : 'bg-slate-800 text-slate-200 rounded-bl-none border border-slate-700';
+
+      msgDiv.innerHTML = `
+        <div class="max-w-[80%] px-4 py-2 rounded-2xl ${alignClass} text-sm shadow">
+          <span class="block text-[10px] font-bold text-slate-300/70 mb-0.5">${sender}</span>
+          ${text}
+        </div>
+      `;
+
+      container.appendChild(msgDiv);
+      container.scrollTop = container.scrollHeight;
+
+      // Auto-destruct message from screen after 60 seconds
+      setTimeout(() => {
+        msgDiv.classList.add('opacity-0');
+        setTimeout(() => msgDiv.remove(), 500);
+      }, 60000);
+    }
+
+    function appendSystemMessage(text) {
+      const container = document.getElementById('messages');
+      container.innerHTML += `
+        <div class="text-center my-2">
+          <span class="text-[11px] bg-slate-800/80 text-slate-400 px-3 py-1 rounded-full border border-slate-700/50">${text}</span>
+        </div>
+      `;
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function leaveRoom() {
+      window.location.reload();
+    }
+  </script>
+</body>
+</html>
