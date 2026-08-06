@@ -31,7 +31,7 @@
       </div>
       <div>
         <label class="text-xs font-semibold uppercase text-slate-400">Shared Passphrase</label>
-        <input type="password" id="password" value="kumar123" placeholder="••••••••••••" class="w-full mt-1 px-4 py-3 bg-slate-900/80 rounded-xl border border-slate-700 focus:outline-none focus:border-cyan-500 text-sm transition" />
+        <input type="password" id="password" placeholder="Enter Passphrase" class="w-full mt-1 px-4 py-3 bg-slate-900/80 rounded-xl border border-slate-700 focus:outline-none focus:border-cyan-500 text-sm transition" />
       </div>
       <button onclick="joinRoom()" class="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 rounded-xl font-bold text-sm tracking-wide shadow-lg shadow-cyan-500/20 transition duration-200">
         Connect to Private Room
@@ -69,7 +69,6 @@
     let cryptoKey = null;
     let activeRoom = '';
 
-    // Fixed credentials defined according to project requirements
     const ALLOWED_ROOM = "nitin123";
     const ALLOWED_PASS = "kumar123";
 
@@ -95,9 +94,9 @@
       const room = document.getElementById('room').value.trim();
       const password = document.getElementById('password').value;
 
-      // Strict check for customized ID and Password
+      // Check if user entered the exact password "kumar123"
       if (room !== ALLOWED_ROOM || password !== ALLOWED_PASS) {
-        return alert(`Access Denied! Only Room ID "${ALLOWED_ROOM}" and Password "${ALLOWED_PASS}" are authorized.`);
+        return alert("Access Denied! Incorrect Room ID or Passphrase.");
       }
 
       activeRoom = room;
@@ -183,7 +182,6 @@
       container.appendChild(msgDiv);
       container.scrollTop = container.scrollHeight;
 
-      // Auto-destruct timer (60 seconds)
       setTimeout(() => {
         msgDiv.classList.add('opacity-0');
         setTimeout(() => msgDiv.remove(), 500);
