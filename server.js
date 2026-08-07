@@ -7,7 +7,7 @@ const bcrypt = require('bcryptjs');
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
-  maxHttpBufferSize: 1e7 // Up to 10MB file payloads
+  maxHttpBufferSize: 1e7 // Support up to 10MB photo payloads
 });
 
 // Database Setup
@@ -45,7 +45,7 @@ db.exec(`
 `);
 
 // Prepared Statements
-const stmtGetUser = db.prepare('SELECT * FROM users WHERE user_id = ?');
+const stmtGetUser = db.prepare('SELECT * FROM users WHERE LOWER(user_id) = LOWER(?)');
 const stmtCreateUser = db.prepare('INSERT INTO users (user_id, password_hash, display_name) VALUES (?, ?, ?)');
 
 const stmtGetRoom = db.prepare('SELECT * FROM rooms WHERE room_id = ?');
@@ -56,7 +56,7 @@ const stmtGetUserRooms = db.prepare(`
   SELECT r.room_id, r.room_name 
   FROM rooms r 
   JOIN room_members rm ON r.room_id = rm.room_id 
-  WHERE rm.user_id = ?
+  WHERE LOWER(rm.user_id) = LOWER(?)
 `);
 
 const stmtSaveMessage = db.prepare('INSERT INTO messages (room_id, iv, data) VALUES (?, ?, ?)');
@@ -71,12 +71,13 @@ io.on('connection', (socket) => {
   // Auth: Register
   socket.on('register', async ({ userId, displayName, password }) => {
     try {
-      if (stmtGetUser.get(userId)) {
+      const cleanUserId = userId.trim().toLowerCase();
+      if (stmtGetUser.get(cleanUserId)) {
         return socket.emit('auth-error', 'User ID already taken. Choose another.');
       }
       const hash = await bcrypt.hash(password, 10);
-      stmtCreateUser.run(userId, hash, displayName);
-      socket.emit('auth-success', { userId, displayName, rooms: [] });
+      stmtCreateUser.run(cleanUserId, hash, displayName.trim());
+      socket.emit('auth-success', { userId: cleanUserId, displayName: displayName.trim(), rooms: [] });
     } catch (err) {
       socket.emit('auth-error', 'Registration failed: ' + err.message);
     }
@@ -85,16 +86,17 @@ io.on('connection', (socket) => {
   // Auth: Login
   socket.on('login', async ({ userId, password }) => {
     try {
-      const user = stmtGetUser.get(userId);
+      const cleanUserId = userId.trim().toLowerCase();
+      const user = stmtGetUser.get(cleanUserId);
       if (!user) return socket.emit('auth-error', 'User ID not found.');
 
       const valid = await bcrypt.compare(password, user.password_hash);
       if (!valid) return socket.emit('auth-error', 'Invalid password.');
 
-      const userRooms = stmtGetUserRooms.all(userId);
-      activeSessions.set(socket.id, { userId, displayName: user.display_name, activeRoom: null });
+      const userRooms = stmtGetUserRooms.all(cleanUserId);
+      activeSessions.set(socket.id, { userId: cleanUserId, displayName: user.display_name, activeRoom: null });
 
-      socket.emit('auth-success', { userId, displayName: user.display_name, rooms: userRooms });
+      socket.emit('auth-success', { userId: cleanUserId, displayName: user.display_name, rooms: userRooms });
     } catch (err) {
       socket.emit('auth-error', 'Login failed: ' + err.message);
     }
@@ -103,33 +105,39 @@ io.on('connection', (socket) => {
   // Room Action: Create Room
   socket.on('create-room', ({ userId, roomId, roomName, passphraseHash }) => {
     try {
-      if (stmtGetRoom.get(roomId)) {
+      const cleanUserId = userId.trim().toLowerCase();
+      const cleanRoomId = roomId.trim();
+
+      if (stmtGetRoom.get(cleanRoomId)) {
         return socket.emit('room-error', 'Room ID already exists!');
       }
 
-      stmtCreateRoom.run(roomId, roomName, passphraseHash);
-      stmtAddMember.run(roomId, userId);
+      stmtCreateRoom.run(cleanRoomId, roomName.trim(), passphraseHash);
+      stmtAddMember.run(cleanRoomId, cleanUserId);
 
-      const userRooms = stmtGetUserRooms.all(userId);
+      const userRooms = stmtGetUserRooms.all(cleanUserId);
       socket.emit('update-rooms', userRooms);
-      socket.emit('room-action-success', { roomId, roomName });
+      socket.emit('room-action-success', { roomId: cleanRoomId, roomName: roomName.trim() });
     } catch (err) {
       socket.emit('room-error', 'Failed to create room: ' + err.message);
     }
   });
 
-  // Room Action: Join Existing Room (First Time)
+  // Room Action: Join Existing Room
   socket.on('join-room', ({ userId, roomId, passphraseHash }) => {
     try {
-      const room = stmtGetRoom.get(roomId);
+      const cleanUserId = userId.trim().toLowerCase();
+      const cleanRoomId = roomId.trim();
+
+      const room = stmtGetRoom.get(cleanRoomId);
       if (!room) return socket.emit('room-error', 'Room ID does not exist.');
       if (room.passphrase_hash !== passphraseHash) return socket.emit('room-error', 'Incorrect room passphrase.');
 
-      stmtAddMember.run(roomId, userId);
+      stmtAddMember.run(cleanRoomId, cleanUserId);
 
-      const userRooms = stmtGetUserRooms.all(userId);
+      const userRooms = stmtGetUserRooms.all(cleanUserId);
       socket.emit('update-rooms', userRooms);
-      socket.emit('room-action-success', { roomId, roomName: room.room_name });
+      socket.emit('room-action-success', { roomId: cleanRoomId, roomName: room.room_name });
     } catch (err) {
       socket.emit('room-error', 'Failed to join room: ' + err.message);
     }
