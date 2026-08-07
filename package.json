@@ -1,5 +1,10 @@
 {
+  "name": "cipherroom",
+  "version": "1.0.0",
+  "main": "server.js",
   "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^11.8.0",
     "express": "^5.2.1",
     "socket.io": "^4.8.3"
   }
