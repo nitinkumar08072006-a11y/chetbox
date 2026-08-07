@@ -147,23 +147,27 @@
     }
 
     async function handleAuthSubmit() {
-      const username = document.getElementById('username').value.trim();
-      const room = document.getElementById('room').value.trim();
-      const password = document.getElementById('password').value;
+      try {
+        const username = document.getElementById('username').value.trim();
+        const room = document.getElementById('room').value.trim();
+        const password = document.getElementById('password').value;
 
-      if (!username || !room || !password) {
-        return alert("Please fill in your Name, Room ID, and Passphrase.");
-      }
+        if (!username || !room || !password) {
+          return alert("Please fill in your Name, Room ID, and Passphrase.");
+        }
 
-      myName = username;
-      activeRoom = room;
-      const passwordHash = await hashPass(password);
-      cryptoKey = await deriveKey(password, room);
+        myName = username;
+        activeRoom = room;
+        const passwordHash = await hashPass(password);
+        cryptoKey = await deriveKey(password, room);
 
-      if (currentMode === 'create') {
-        socket.emit('create-room', { room, passwordHash, username });
-      } else {
-        socket.emit('join-room', { room, passwordHash, username });
+        if (currentMode === 'create') {
+          socket.emit('create-room', { room, passwordHash, username });
+        } else {
+          socket.emit('join-room', { room, passwordHash, username });
+        }
+      } catch (err) {
+        alert("An error occurred: " + err.message);
       }
     }
 
