@@ -18,7 +18,7 @@ io.on('connection', (socket) => {
   // Create Room Handler
   socket.on('create-room', ({ room, passwordHash, username }) => {
     if (rooms.has(room)) {
-      return socket.emit('error-msg', 'Room ID already exists! Choose a different ID or use Join Room.');
+      return socket.emit('error-msg', 'Room ID already exists! Choose a different ID or switch to Join Room.');
     }
 
     const roomData = {
@@ -31,7 +31,8 @@ io.on('connection', (socket) => {
     socket.join(room);
     socket.currentRoom = room;
 
-    socket.emit('joined', { room });
+    // Immediately notify creator they have successfully launched the room
+    socket.emit('joined', { room, isHost: true });
     io.to(room).emit('peer-status', { count: roomData.count, user: username, status: 'connected' });
   });
 
@@ -56,7 +57,7 @@ io.on('connection', (socket) => {
     socket.join(room);
     socket.currentRoom = room;
 
-    socket.emit('joined', { room });
+    socket.emit('joined', { room, isHost: false });
     io.to(room).emit('peer-status', { count: roomData.count, user: username, status: 'connected' });
   });
 
@@ -72,8 +73,8 @@ io.on('connection', (socket) => {
       const roomData = rooms.get(room);
       const username = roomData.clients.get(socket.id);
 
-      roomData.clients.delete(socket.id);
-      roomData.count = roomData.clients.size;
+      if (roomData.clients) roomData.clients.delete(socket.id);
+      roomData.count = roomData.clients ? roomData.clients.size : 0;
 
       if (roomData.count <= 0) {
         rooms.delete(room);
