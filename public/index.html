@@ -6,137 +6,226 @@
   <title>CipherRoom | Nitin Kumar (RGIPT CSD)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body { background: #0b1329; }
-    .glass { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.1); }
-    ::-webkit-scrollbar { width: 6px; }
+    body { background: #080d1a; }
+    .glass { background: rgba(15, 23, 42, 0.90); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); }
+    ::-webkit-scrollbar { width: 5px; }
     ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
-    .reply-preview { border-left: 4px solid #06b6d4; }
+    .reply-preview { border-left: 3px solid #06b6d4; }
   </style>
 </head>
 <body class="text-slate-100 min-h-screen flex items-center justify-center p-2 sm:p-4 font-sans">
 
-  <!-- Authentication Panel -->
-  <div id="auth-card" class="glass w-full max-w-md p-6 sm:p-8 rounded-2xl shadow-2xl space-y-5">
+  <!-- AUTH SECTION -->
+  <div id="auth-screen" class="glass w-full max-w-md p-6 sm:p-8 rounded-2xl shadow-2xl space-y-6">
     <div class="text-center space-y-2">
       <div class="inline-block px-3 py-1 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 text-[11px] font-semibold tracking-wide uppercase">
         A Product by Nitin Kumar
       </div>
       <p class="text-[10px] text-slate-400 font-medium">2nd Year CSD Student • RGIPT</p>
       <h1 class="text-3xl font-black bg-gradient-to-r from-cyan-400 via-sky-400 to-blue-500 bg-clip-text text-transparent">CipherRoom</h1>
-      <p class="text-slate-400 text-xs">End-to-End Encrypted Secure Portal (Up to 10 Users)</p>
+      <p class="text-slate-400 text-xs">End-to-End Encrypted Group Chat Portal</p>
     </div>
 
-    <!-- Mode Selector Tabs -->
+    <!-- Auth Mode Tabs -->
     <div class="grid grid-cols-2 gap-2 bg-slate-900/80 p-1 rounded-xl border border-slate-700">
-      <button id="tab-create" type="button" onclick="switchTab('create')" class="py-2 text-xs font-bold rounded-lg bg-cyan-500 text-slate-950 transition">Create Room</button>
-      <button id="tab-join" type="button" onclick="switchTab('join')" class="py-2 text-xs font-bold rounded-lg text-slate-400 hover:text-white transition">Join Room</button>
+      <button id="auth-tab-login" onclick="switchAuthTab('login')" class="py-2 text-xs font-bold rounded-lg bg-cyan-500 text-slate-950 transition">Login</button>
+      <button id="auth-tab-register" onclick="switchAuthTab('register')" class="py-2 text-xs font-bold rounded-lg text-slate-400 hover:text-white transition">Register</button>
     </div>
 
-    <!-- Form Container -->
+    <!-- Auth Form -->
     <div class="space-y-3.5">
-      <div>
-        <label class="text-xs font-semibold uppercase text-slate-400">Your Name</label>
-        <input type="text" id="username" placeholder="e.g. Nitin Kumar" class="w-full mt-1 px-4 py-2.5 bg-slate-900/90 rounded-xl border border-slate-700 focus:outline-none focus:border-cyan-500 text-sm transition" />
+      <div id="display-name-field" class="hidden">
+        <label class="text-xs font-semibold uppercase text-slate-400">Display Name</label>
+        <input type="text" id="auth-name" placeholder="e.g. Nitin Kumar" class="w-full mt-1 px-4 py-2.5 bg-slate-900/90 rounded-xl border border-slate-700 focus:outline-none focus:border-cyan-500 text-sm" />
       </div>
 
       <div>
-        <label class="text-xs font-semibold uppercase text-slate-400">Room ID</label>
-        <input type="text" id="room" placeholder="Enter Room ID" class="w-full mt-1 px-4 py-2.5 bg-slate-900/90 rounded-xl border border-slate-700 focus:outline-none focus:border-cyan-500 text-sm transition" />
+        <label class="text-xs font-semibold uppercase text-slate-400">User ID (Letters/Numbers)</label>
+        <input type="text" id="auth-userid" placeholder="e.g. nitin08" class="w-full mt-1 px-4 py-2.5 bg-slate-900/90 rounded-xl border border-slate-700 focus:outline-none focus:border-cyan-500 text-sm" />
       </div>
 
       <div>
-        <label class="text-xs font-semibold uppercase text-slate-400">Passphrase</label>
-        <input type="password" id="password" placeholder="Enter Secret Passphrase" class="w-full mt-1 px-4 py-2.5 bg-slate-900/90 rounded-xl border border-slate-700 focus:outline-none focus:border-cyan-500 text-sm transition" />
+        <label class="text-xs font-semibold uppercase text-slate-400">Password</label>
+        <input type="password" id="auth-password" placeholder="Enter Account Password" class="w-full mt-1 px-4 py-2.5 bg-slate-900/90 rounded-xl border border-slate-700 focus:outline-none focus:border-cyan-500 text-sm" />
       </div>
 
-      <button id="submit-btn" type="button" onclick="handleAuthSubmit()" class="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 rounded-xl font-bold text-sm tracking-wide shadow-lg shadow-cyan-500/20 transition duration-200">
-        Create & Launch Room
+      <button id="auth-submit-btn" onclick="handleAuthSubmit()" class="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 rounded-xl font-bold text-sm shadow-lg shadow-cyan-500/20 transition">
+        Login to Account
       </button>
     </div>
   </div>
 
-  <!-- Main Chat Panel -->
-  <div id="chat-card" class="glass w-full max-w-3xl h-[650px] rounded-2xl shadow-2xl flex-col hidden overflow-hidden">
-    <!-- Header -->
-    <div class="p-4 border-b border-slate-700/60 flex items-center justify-between bg-slate-900/40">
-      <div>
-        <div class="flex items-center gap-2">
-          <h2 id="room-display" class="font-bold text-lg text-cyan-400"></h2>
-          <button onclick="copyRoomDetails()" class="text-[10px] bg-cyan-950 hover:bg-cyan-900 text-cyan-300 px-2 py-0.5 rounded border border-cyan-800/50 transition">📋 Copy Room ID</button>
+  <!-- MAIN WHATSAPP-STYLE APP WORKSPACE -->
+  <div id="app-screen" class="glass w-full max-w-5xl h-[700px] rounded-2xl shadow-2xl hidden flex-col md:flex-row overflow-hidden border border-slate-800">
+    
+    <!-- LEFT SIDEBAR: User Info & Room List -->
+    <div class="w-full md:w-80 bg-slate-900/90 border-r border-slate-800 flex flex-col">
+      <!-- Profile Header -->
+      <div class="p-4 border-b border-slate-800 flex items-center justify-between">
+        <div>
+          <h3 id="current-user-name" class="font-bold text-sm text-cyan-400"></h3>
+          <p id="current-user-id" class="text-[11px] text-slate-400"></p>
         </div>
-        <span id="status-badge" class="text-xs px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-500/30">Connecting...</span>
+        <button onclick="logout()" class="text-[11px] bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 px-2.5 py-1 rounded-lg">Logout</button>
       </div>
-      <button onclick="leaveRoom()" class="text-xs bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 px-3 py-1.5 rounded-lg transition">Disconnect</button>
+
+      <!-- Action Buttons -->
+      <div class="p-3 grid grid-cols-2 gap-2 border-b border-slate-800 bg-slate-950/40">
+        <button onclick="toggleModal('modal-create')" class="py-2 px-2 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 rounded-xl text-xs font-bold transition">+ Create Room</button>
+        <button onclick="toggleModal('modal-join')" class="py-2 px-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-xl text-xs font-bold transition">🔗 Join Room</button>
+      </div>
+
+      <!-- Joined Rooms List -->
+      <div class="flex-1 overflow-y-auto p-2 space-y-1" id="rooms-list-container">
+        <!-- Dynamic Room Tabs will render here -->
+      </div>
+
+      <!-- Credit Footer -->
+      <div class="p-3 border-t border-slate-800/80 text-center bg-slate-950/30">
+        <span class="text-[10px] text-slate-500 font-medium">Developed by Nitin Kumar • RGIPT CSD</span>
+      </div>
     </div>
 
-    <!-- Messages Container -->
-    <div id="messages" class="flex-1 p-4 overflow-y-auto space-y-3"></div>
-
-    <!-- Reply Preview Box -->
-    <div id="reply-box" class="hidden px-4 py-2 bg-slate-800/80 border-t border-slate-700/60 flex items-center justify-between">
-      <div class="reply-preview pl-3 text-xs overflow-hidden pr-2">
-        <span id="reply-sender" class="font-semibold text-cyan-400 block"></span>
-        <span id="reply-text" class="text-slate-300 truncate block"></span>
+    <!-- RIGHT CHAT AREA -->
+    <div class="flex-1 flex flex-col bg-slate-950/40">
+      
+      <!-- Placeholder when no room is open -->
+      <div id="no-chat-selected" class="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-3">
+        <div class="text-4xl">💬</div>
+        <h3 class="text-lg font-bold text-slate-300">No Room Selected</h3>
+        <p class="text-xs text-slate-500 max-w-sm">Select a room from the sidebar or create/join a new group to start messaging.</p>
       </div>
-      <button onclick="cancelReply()" class="text-slate-400 hover:text-white text-sm font-bold">✕</button>
-    </div>
 
-    <!-- Image Preview Box -->
-    <div id="image-preview-box" class="hidden px-4 py-2 bg-slate-800/80 border-t border-slate-700/60 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <img id="image-preview" class="h-10 w-10 object-cover rounded-md border border-slate-600" />
-        <span class="text-xs text-slate-300">Photo attached ready to send</span>
+      <!-- Active Chat Container -->
+      <div id="chat-wrapper" class="flex-1 flex-col hidden h-full overflow-hidden">
+        <!-- Room Header -->
+        <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/60">
+          <div>
+            <h2 id="active-room-title" class="font-bold text-cyan-400 text-base"></h2>
+            <p id="active-room-sub" class="text-[11px] text-slate-400"></p>
+          </div>
+          <button onclick="copyActiveRoomId()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg border border-slate-700">📋 Copy Room ID</button>
+        </div>
+
+        <!-- Messages Area -->
+        <div id="messages" class="flex-1 p-4 overflow-y-auto space-y-3"></div>
+
+        <!-- Reply Preview -->
+        <div id="reply-box" class="hidden px-4 py-2 bg-slate-900 border-t border-slate-800 flex items-center justify-between">
+          <div class="reply-preview pl-3 text-xs overflow-hidden pr-2">
+            <span id="reply-sender" class="font-semibold text-cyan-400 block"></span>
+            <span id="reply-text" class="text-slate-300 truncate block"></span>
+          </div>
+          <button onclick="cancelReply()" class="text-slate-400 hover:text-white text-sm font-bold">✕</button>
+        </div>
+
+        <!-- Image Preview -->
+        <div id="image-preview-box" class="hidden px-4 py-2 bg-slate-900 border-t border-slate-800 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <img id="image-preview" class="h-10 w-10 object-cover rounded border border-slate-700" />
+            <span class="text-xs text-slate-300">Photo ready to send</span>
+          </div>
+          <button onclick="clearImageAttachment()" class="text-slate-400 hover:text-white text-sm font-bold">✕</button>
+        </div>
+
+        <!-- Input Bar -->
+        <div class="p-3 border-t border-slate-800 flex gap-2 items-center bg-slate-900/60">
+          <label for="img-input" class="cursor-pointer p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700">
+            📷
+            <input type="file" id="img-input" accept="image/*" class="hidden" onchange="handleImageSelect(event)" />
+          </label>
+          <input type="text" id="msg-input" placeholder="Type an encrypted message..." onkeydown="if(event.key==='Enter') sendMessage()" class="flex-1 px-4 py-2.5 bg-slate-950/80 rounded-xl border border-slate-800 focus:outline-none focus:border-cyan-500 text-sm" />
+          <button onclick="sendMessage()" class="px-5 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold rounded-xl text-sm transition">Send</button>
+        </div>
       </div>
-      <button onclick="clearImageAttachment()" class="text-slate-400 hover:text-white text-sm font-bold">✕</button>
-    </div>
 
-    <!-- Input Bar -->
-    <div class="p-3 border-t border-slate-700/60 flex gap-2 items-center bg-slate-900/30">
-      <label for="img-input" class="cursor-pointer p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700 transition">
-        📷
-        <input type="file" id="img-input" accept="image/*" class="hidden" onchange="handleImageSelect(event)" />
-      </label>
-      <input type="text" id="msg-input" placeholder="Type an encrypted message..." onkeydown="if(event.key==='Enter') sendMessage()" class="flex-1 px-4 py-2.5 bg-slate-900/90 rounded-xl border border-slate-700 focus:outline-none focus:border-cyan-500 text-sm transition" />
-      <button onclick="sendMessage()" class="px-5 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold rounded-xl text-sm transition shadow-md shadow-cyan-500/20">Send</button>
+    </div>
+  </div>
+
+  <!-- MODAL: CREATE ROOM -->
+  <div id="modal-create" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="glass w-full max-w-sm p-6 rounded-2xl space-y-4">
+      <h3 class="text-lg font-bold text-cyan-400">Create New Room</h3>
+      <div>
+        <label class="text-xs font-semibold text-slate-400">Room Name</label>
+        <input type="text" id="create-room-name" placeholder="e.g. RGIPT CSD Squad" class="w-full mt-1 px-3 py-2 bg-slate-900 rounded-xl border border-slate-700 text-sm focus:outline-none focus:border-cyan-500" />
+      </div>
+      <div>
+        <label class="text-xs font-semibold text-slate-400">Unique Room ID</label>
+        <input type="text" id="create-room-id" placeholder="e.g. csd-squad-2026" class="w-full mt-1 px-3 py-2 bg-slate-900 rounded-xl border border-slate-700 text-sm focus:outline-none focus:border-cyan-500" />
+      </div>
+      <div>
+        <label class="text-xs font-semibold text-slate-400">Passphrase (For Encryption)</label>
+        <input type="password" id="create-room-pass" placeholder="Secret Passphrase" class="w-full mt-1 px-3 py-2 bg-slate-900 rounded-xl border border-slate-700 text-sm focus:outline-none focus:border-cyan-500" />
+      </div>
+      <div class="flex gap-2 pt-2">
+        <button onclick="toggleModal('modal-create')" class="flex-1 py-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-bold">Cancel</button>
+        <button onclick="handleCreateRoom()" class="flex-1 py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 rounded-xl text-xs font-bold">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: JOIN ROOM -->
+  <div id="modal-join" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="glass w-full max-w-sm p-6 rounded-2xl space-y-4">
+      <h3 class="text-lg font-bold text-cyan-400">Join Existing Room</h3>
+      <div>
+        <label class="text-xs font-semibold text-slate-400">Room ID</label>
+        <input type="text" id="join-room-id" placeholder="Enter Room ID" class="w-full mt-1 px-3 py-2 bg-slate-900 rounded-xl border border-slate-700 text-sm focus:outline-none focus:border-cyan-500" />
+      </div>
+      <div>
+        <label class="text-xs font-semibold text-slate-400">Room Passphrase</label>
+        <input type="password" id="join-room-pass" placeholder="Enter Room Passphrase" class="w-full mt-1 px-3 py-2 bg-slate-900 rounded-xl border border-slate-700 text-sm focus:outline-none focus:border-cyan-500" />
+      </div>
+      <div class="flex gap-2 pt-2">
+        <button onclick="toggleModal('modal-join')" class="flex-1 py-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-bold">Cancel</button>
+        <button onclick="handleJoinRoom()" class="flex-1 py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 rounded-xl text-xs font-bold">Join</button>
+      </div>
     </div>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
-    let cryptoKey = null;
-    let activeRoom = '';
-    let myName = '';
-    let currentMode = 'create';
+    let authMode = 'login';
+    let currentUser = null; // { userId, displayName }
+    let joinedRooms = []; // [{ room_id, room_name }]
+    let activeRoomObj = null; // { roomId, roomName, cryptoKey }
     let selectedReply = null;
     let attachedImageBase64 = null;
 
-    function switchTab(mode) {
-      currentMode = mode;
-      const createBtn = document.getElementById('tab-create');
-      const joinBtn = document.getElementById('tab-join');
-      const submitBtn = document.getElementById('submit-btn');
+    // Local Storage Cryptographic Key Caching
+    const roomKeys = new Map(); // roomId -> CryptoKey
 
-      if (mode === 'create') {
-        createBtn.className = "py-2 text-xs font-bold rounded-lg bg-cyan-500 text-slate-950 transition";
-        joinBtn.className = "py-2 text-xs font-bold rounded-lg text-slate-400 hover:text-white transition";
-        submitBtn.innerText = "Create & Launch Room";
+    function switchAuthTab(mode) {
+      authMode = mode;
+      const loginBtn = document.getElementById('auth-tab-login');
+      const regBtn = document.getElementById('auth-tab-register');
+      const nameField = document.getElementById('display-name-field');
+      const submitBtn = document.getElementById('auth-submit-btn');
+
+      if (mode === 'login') {
+        loginBtn.className = "py-2 text-xs font-bold rounded-lg bg-cyan-500 text-slate-950 transition";
+        regBtn.className = "py-2 text-xs font-bold rounded-lg text-slate-400 hover:text-white transition";
+        nameField.classList.add('hidden');
+        submitBtn.innerText = "Login to Account";
       } else {
-        joinBtn.className = "py-2 text-xs font-bold rounded-lg bg-cyan-500 text-slate-950 transition";
-        createBtn.className = "py-2 text-xs font-bold rounded-lg text-slate-400 hover:text-white transition";
-        submitBtn.innerText = "Join Private Room";
+        regBtn.className = "py-2 text-xs font-bold rounded-lg bg-cyan-500 text-slate-950 transition";
+        loginBtn.className = "py-2 text-xs font-bold rounded-lg text-slate-400 hover:text-white transition";
+        nameField.classList.remove('hidden');
+        submitBtn.innerText = "Create Account";
       }
     }
 
-    async function hashPass(password) {
-      const msgUint8 = new TextEncoder().encode(password);
+    async function hashPass(str) {
+      const msgUint8 = new TextEncoder().encode(str);
       const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
       return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
     }
 
-    async function deriveKey(password, saltStr) {
+    async function deriveKey(passphrase, saltStr) {
       const enc = new TextEncoder();
-      const baseKey = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveKey"]);
+      const baseKey = await crypto.subtle.importKey("raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]);
       return crypto.subtle.deriveKey(
         { name: "PBKDF2", salt: enc.encode(saltStr), iterations: 100000, hash: "SHA-256" },
         baseKey,
@@ -146,69 +235,256 @@
       );
     }
 
-    async function handleAuthSubmit() {
-      try {
-        const username = document.getElementById('username').value.trim();
-        const room = document.getElementById('room').value.trim();
-        const password = document.getElementById('password').value;
+    function handleAuthSubmit() {
+      const userId = document.getElementById('auth-userid').value.trim();
+      const password = document.getElementById('auth-password').value;
 
-        if (!username || !room || !password) {
-          return alert("Please fill in your Name, Room ID, and Passphrase.");
-        }
+      if (!userId || !password) return alert('Please complete all fields.');
 
-        myName = username;
-        activeRoom = room;
-        const passwordHash = await hashPass(password);
-        cryptoKey = await deriveKey(password, room);
-
-        if (currentMode === 'create') {
-          socket.emit('create-room', { room, passwordHash, username });
-        } else {
-          socket.emit('join-room', { room, passwordHash, username });
-        }
-      } catch (err) {
-        alert("An error occurred: " + err.message);
+      if (authMode === 'register') {
+        const displayName = document.getElementById('auth-name').value.trim();
+        if (!displayName) return alert('Please enter your Display Name.');
+        socket.emit('register', { userId, displayName, password });
+      } else {
+        socket.emit('login', { userId, password });
       }
     }
 
-    socket.on('joined', ({ room, isHost }) => {
-      document.getElementById('auth-card').classList.add('hidden');
-      document.getElementById('chat-card').classList.remove('hidden');
-      document.getElementById('chat-card').classList.add('flex');
-      document.getElementById('room-display').innerText = `# ${room}`;
+    socket.on('auth-error', (msg) => alert(msg));
+    socket.on('room-error', (msg) => alert(msg));
 
-      if (isHost) {
-        appendSystemMessage(`Room created successfully! Share Room ID "${room}" and your passphrase with your friends.`);
-      } else {
-        appendSystemMessage(`Joined room successfully! AES-256 encrypted session initialized.`);
+    socket.on('auth-success', ({ userId, displayName, rooms }) => {
+      currentUser = { userId, displayName };
+      joinedRooms = rooms;
+
+      document.getElementById('auth-screen').classList.add('hidden');
+      document.getElementById('app-screen').classList.remove('hidden');
+      document.getElementById('app-screen').classList.add('flex');
+
+      document.getElementById('current-user-name').innerText = displayName;
+      document.getElementById('current-user-id').innerText = `@${userId}`;
+
+      renderRoomsList();
+    });
+
+    socket.on('update-rooms', (rooms) => {
+      joinedRooms = rooms;
+      renderRoomsList();
+    });
+
+    function renderRoomsList() {
+      const container = document.getElementById('rooms-list-container');
+      container.innerHTML = '';
+
+      if (joinedRooms.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-500 text-center py-4">No joined rooms yet.</p>`;
+        return;
+      }
+
+      joinedRooms.forEach(r => {
+        const active = activeRoomObj && activeRoomObj.roomId === r.room_id;
+        const btn = document.createElement('button');
+        btn.onclick = () => selectRoom(r.room_id, r.room_name);
+        btn.className = `w-full text-left p-3 rounded-xl transition border ${
+          active 
+            ? 'bg-cyan-500/10 border-cyan-500/40 text-cyan-300' 
+            : 'bg-slate-900/40 hover:bg-slate-800 border-slate-800 text-slate-300'
+        }`;
+
+        btn.innerHTML = `
+          <div class="font-bold text-xs truncate">${r.room_name}</div>
+          <div class="text-[10px] text-slate-500 truncate"># ${r.room_id}</div>
+        `;
+        container.appendChild(btn);
+      });
+    }
+
+    async function selectRoom(roomId, roomName) {
+      let key = roomKeys.get(roomId);
+      if (!key) {
+        const passphrase = prompt(`Enter encryption passphrase for room "${roomName}":`);
+        if (!passphrase) return;
+        key = await deriveKey(passphrase, roomId);
+        roomKeys.set(roomId, key);
+      }
+
+      activeRoomObj = { roomId, roomName, cryptoKey: key };
+      renderRoomsList();
+
+      document.getElementById('no-chat-selected').classList.add('hidden');
+      document.getElementById('chat-wrapper').classList.remove('hidden');
+      document.getElementById('chat-wrapper').classList.add('flex');
+
+      document.getElementById('active-room-title').innerText = roomName;
+      document.getElementById('active-room-sub').innerText = `# ${roomId}`;
+      document.getElementById('messages').innerHTML = '';
+
+      socket.emit('open-room', { roomId });
+    }
+
+    async function handleCreateRoom() {
+      const roomName = document.getElementById('create-room-name').value.trim();
+      const roomId = document.getElementById('create-room-id').value.trim();
+      const pass = document.getElementById('create-room-pass').value;
+
+      if (!roomName || !roomId || !pass) return alert('Fill all room details.');
+
+      const passphraseHash = await hashPass(pass);
+      const key = await deriveKey(pass, roomId);
+      roomKeys.set(roomId, key);
+
+      socket.emit('create-room', { userId: currentUser.userId, roomId, roomName, passphraseHash });
+      toggleModal('modal-create');
+    }
+
+    async function handleJoinRoom() {
+      const roomId = document.getElementById('join-room-id').value.trim();
+      const pass = document.getElementById('join-room-pass').value;
+
+      if (!roomId || !pass) return alert('Fill all details.');
+
+      const passphraseHash = await hashPass(pass);
+      const key = await deriveKey(pass, roomId);
+      roomKeys.set(roomId, key);
+
+      socket.emit('join-room', { userId: currentUser.userId, roomId, passphraseHash });
+      toggleModal('modal-join');
+    }
+
+    socket.on('room-action-success', ({ roomId, roomName }) => {
+      selectRoom(roomId, roomName);
+    });
+
+    socket.on('room-opened', async ({ roomId, history }) => {
+      if (!activeRoomObj || activeRoomObj.roomId !== roomId) return;
+      if (history && history.length > 0) {
+        for (const payload of history) {
+          await decryptAndAppendMessage(payload);
+        }
       }
     });
 
-    socket.on('error-msg', (msg) => alert(msg));
+    async function sendMessage() {
+      if (!activeRoomObj) return;
+      const input = document.getElementById('msg-input');
+      const text = input.value.trim();
 
-    socket.on('peer-status', ({ count, user, status }) => {
-      const badge = document.getElementById('status-badge');
-      badge.className = "text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
-      badge.innerText = `Active Members (${count}/10)`;
+      if (!text && !attachedImageBase64) return;
 
-      if (status === 'connected' && user && user !== myName) {
-        appendSystemMessage(`${user} joined the room.`);
-      } else if (status === 'disconnected' && user) {
-        appendSystemMessage(`${user} left the room.`);
+      const payloadData = {
+        sender: currentUser.displayName,
+        text: text,
+        image: attachedImageBase64,
+        replyTo: selectedReply
+      };
+
+      const enc = new TextEncoder();
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const encrypted = await crypto.subtle.encrypt(
+        { name: "AES-GCM", iv },
+        activeRoomObj.cryptoKey,
+        enc.encode(JSON.stringify(payloadData))
+      );
+
+      appendMessage(currentUser.displayName, text, attachedImageBase64, selectedReply, true);
+
+      socket.emit('send-message', {
+        roomId: activeRoomObj.roomId,
+        payload: {
+          iv: Array.from(iv),
+          data: Array.from(new Uint8Array(encrypted))
+        }
+      });
+
+      input.value = '';
+      cancelReply();
+      clearImageAttachment();
+    }
+
+    socket.on('receive-message', async ({ roomId, payload }) => {
+      if (activeRoomObj && activeRoomObj.roomId === roomId) {
+        await decryptAndAppendMessage(payload);
       }
     });
 
-    function copyRoomDetails() {
-      navigator.clipboard.writeText(activeRoom);
-      alert(`Room ID "${activeRoom}" copied to clipboard! Share it and your passphrase with your friends.`);
+    async function decryptAndAppendMessage(payload) {
+      try {
+        const decrypted = await crypto.subtle.decrypt(
+          { name: "AES-GCM", iv: new Uint8Array(payload.iv) },
+          activeRoomObj.cryptoKey,
+          new Uint8Array(payload.data)
+        );
+        const data = JSON.parse(new TextDecoder().decode(decrypted));
+        const isSelf = data.sender === currentUser.displayName;
+        appendMessage(data.sender, data.text, data.image, data.replyTo, isSelf);
+      } catch (e) {
+        appendSystemMessage('Decryption failed: Passphrase incorrect.');
+      }
+    }
+
+    function appendMessage(sender, text, image, replyTo, isSelf) {
+      const container = document.getElementById('messages');
+      const msgDiv = document.createElement('div');
+      msgDiv.className = `flex flex-col ${isSelf ? 'items-end' : 'items-start'} my-1 group`;
+
+      const alignClass = isSelf ? 'bg-cyan-600 text-white rounded-br-none' : 'bg-slate-800 text-slate-200 rounded-bl-none border border-slate-700';
+
+      let replyHTML = '';
+      if (replyTo) {
+        replyHTML = `
+          <div class="reply-preview bg-black/20 pl-2 pr-3 py-1 rounded mb-1 text-[11px]">
+            <span class="font-bold text-cyan-300 block">${replyTo.sender}</span>
+            <span class="opacity-80 truncate block">${replyTo.text || '[Photo]'}</span>
+          </div>
+        `;
+      }
+
+      let imageHTML = '';
+      if (image) {
+        imageHTML = `<img src="${image}" class="rounded-lg max-h-48 my-1 cursor-pointer border border-slate-700" onclick="window.open('${image}')" />`;
+      }
+
+      msgDiv.innerHTML = `
+        <div class="max-w-[85%] px-3.5 py-2 rounded-2xl ${alignClass} text-sm shadow">
+          <div class="flex items-center justify-between gap-3 mb-0.5">
+            <span class="text-[11px] font-bold ${isSelf ? 'text-cyan-200' : 'text-cyan-400'}">${sender}</span>
+            <button onclick="setReply('${sender}', '${(text || '').replace(/'/g, "\\'")}')" class="opacity-0 group-hover:opacity-100 text-[10px] bg-black/30 hover:bg-black/50 px-1.5 py-0.5 rounded transition">Reply</button>
+          </div>
+          ${replyHTML}
+          ${imageHTML}
+          ${text ? `<span>${text}</span>` : ''}
+        </div>
+      `;
+
+      container.appendChild(msgDiv);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function appendSystemMessage(text) {
+      const container = document.getElementById('messages');
+      container.innerHTML += `
+        <div class="text-center my-2">
+          <span class="text-[11px] bg-slate-800/80 text-slate-400 px-3 py-1 rounded-full border border-slate-700/50">${text}</span>
+        </div>
+      `;
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function toggleModal(id) {
+      document.getElementById(id).classList.toggle('hidden');
+      document.getElementById(id).classList.toggle('flex');
+    }
+
+    function copyActiveRoomId() {
+      if (!activeRoomObj) return;
+      navigator.clipboard.writeText(activeRoomObj.roomId);
+      alert(`Room ID "${activeRoomObj.roomId}" copied to clipboard!`);
     }
 
     function handleImageSelect(e) {
       const file = e.target.files[0];
       if (!file) return;
-      if (file.size > 3 * 1024 * 1024) {
-        return alert('Image size should be under 3MB.');
-      }
+      if (file.size > 3 * 1024 * 1024) return alert('Image size must be under 3MB.');
       const reader = new FileReader();
       reader.onload = function(evt) {
         attachedImageBase64 = evt.target.result;
@@ -236,101 +512,7 @@
       document.getElementById('reply-box').classList.add('hidden');
     }
 
-    async function sendMessage() {
-      const input = document.getElementById('msg-input');
-      const text = input.value.trim();
-
-      if (!text && !attachedImageBase64) return;
-
-      const payloadData = {
-        sender: myName,
-        text: text,
-        image: attachedImageBase64,
-        replyTo: selectedReply
-      };
-
-      const enc = new TextEncoder();
-      const iv = crypto.getRandomValues(new Uint8Array(12));
-      const encrypted = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, cryptoKey, enc.encode(JSON.stringify(payloadData)));
-
-      appendMessage(myName, text, attachedImageBase64, selectedReply, true);
-
-      socket.emit('send-message', {
-        room: activeRoom,
-        payload: {
-          iv: Array.from(iv),
-          data: Array.from(new Uint8Array(encrypted))
-        }
-      });
-
-      input.value = '';
-      cancelReply();
-      clearImageAttachment();
-    }
-
-    socket.on('receive-message', async (payload) => {
-      try {
-        const decrypted = await crypto.subtle.decrypt(
-          { name: "AES-GCM", iv: new Uint8Array(payload.iv) },
-          cryptoKey,
-          new Uint8Array(payload.data)
-        );
-        const data = JSON.parse(new TextDecoder().decode(decrypted));
-        appendMessage(data.sender, data.text, data.image, data.replyTo, false);
-      } catch (e) {
-        appendSystemMessage('Decryption error: Message couldn\'t be decrypted.');
-      }
-    });
-
-    function appendMessage(sender, text, image, replyTo, isSelf) {
-      const container = document.getElementById('messages');
-      const msgDiv = document.createElement('div');
-      msgDiv.className = `flex flex-col ${isSelf ? 'items-end' : 'items-start'} my-1 group`;
-
-      const alignClass = isSelf ? 'bg-cyan-600 text-white rounded-br-none' : 'bg-slate-800 text-slate-200 rounded-bl-none border border-slate-700';
-
-      let replyHTML = '';
-      if (replyTo) {
-        replyHTML = `
-          <div class="reply-preview bg-black/20 pl-2 pr-3 py-1 rounded mb-1 text-[11px]">
-            <span class="font-bold text-cyan-300 block">${replyTo.sender}</span>
-            <span class="opacity-80 truncate block">${replyTo.text || '[Photo]'}</span>
-          </div>
-        `;
-      }
-
-      let imageHTML = '';
-      if (image) {
-        imageHTML = `<img src="${image}" class="rounded-lg max-h-48 my-1 cursor-pointer border border-slate-700" onclick="window.open('${image}')" />`;
-      }
-
-      msgDiv.innerHTML = `
-        <div class="max-w-[85%] px-3.5 py-2 rounded-2xl ${alignClass} text-sm shadow relative">
-          <div class="flex items-center justify-between gap-3 mb-0.5">
-            <span class="text-[11px] font-bold ${isSelf ? 'text-cyan-200' : 'text-cyan-400'}">${sender}</span>
-            <button onclick="setReply('${sender}', '${(text || '').replace(/'/g, "\\'")}')" class="opacity-0 group-hover:opacity-100 text-[10px] bg-black/30 hover:bg-black/50 px-1.5 py-0.5 rounded transition">Reply</button>
-          </div>
-          ${replyHTML}
-          ${imageHTML}
-          ${text ? `<span>${text}</span>` : ''}
-        </div>
-      `;
-
-      container.appendChild(msgDiv);
-      container.scrollTop = container.scrollHeight;
-    }
-
-    function appendSystemMessage(text) {
-      const container = document.getElementById('messages');
-      container.innerHTML += `
-        <div class="text-center my-2">
-          <span class="text-[11px] bg-slate-800/80 text-slate-400 px-3 py-1 rounded-full border border-slate-700/50">${text}</span>
-        </div>
-      `;
-      container.scrollTop = container.scrollHeight;
-    }
-
-    function leaveRoom() {
+    function logout() {
       window.location.reload();
     }
   </script>
