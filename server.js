@@ -24,14 +24,13 @@ io.on('connection', (socket) => {
     const roomData = {
       passwordHash,
       count: 1,
-      clients: new Map([[socket.id], username])
+      clients: new Map([[socket.id, username]]) // Fixed Map entry syntax
     };
 
     rooms.set(room, roomData);
     socket.join(room);
     socket.currentRoom = room;
 
-    // Immediately notify creator they have successfully launched the room
     socket.emit('joined', { room, isHost: true });
     io.to(room).emit('peer-status', { count: roomData.count, user: username, status: 'connected' });
   });
@@ -71,7 +70,7 @@ io.on('connection', (socket) => {
     const room = socket.currentRoom;
     if (room && rooms.has(room)) {
       const roomData = rooms.get(room);
-      const username = roomData.clients.get(socket.id);
+      const username = roomData.clients ? roomData.clients.get(socket.id) : null;
 
       if (roomData.clients) roomData.clients.delete(socket.id);
       roomData.count = roomData.clients ? roomData.clients.size : 0;
