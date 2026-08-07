@@ -26,12 +26,13 @@ db.exec(`
     passphrase_hash TEXT NOT NULL
   );
 
-  CREATE TABLE IF NOT EXISTS room_members (
-    room_id TEXT,
+  CREATE TABLE IF NOT EXISTS user_room_keys (
     user_id TEXT,
-    PRIMARY KEY (room_id, user_id),
-    FOREIGN KEY(room_id) REFERENCES rooms(room_id),
-    FOREIGN KEY(user_id) REFERENCES users(user_id)
+    room_id TEXT,
+    encrypted_passphrase TEXT NOT NULL,
+    PRIMARY KEY (user_id, room_id),
+    FOREIGN KEY(user_id) REFERENCES users(user_id),
+    FOREIGN KEY(room_id) REFERENCES rooms(room_id)
   );
 
   CREATE TABLE IF NOT EXISTS messages (
@@ -51,12 +52,12 @@ const stmtCreateUser = db.prepare('INSERT INTO users (user_id, password_hash, di
 const stmtGetRoom = db.prepare('SELECT * FROM rooms WHERE room_id = ?');
 const stmtCreateRoom = db.prepare('INSERT INTO rooms (room_id, room_name, passphrase_hash) VALUES (?, ?, ?)');
 
-const stmtAddMember = db.prepare('INSERT OR IGNORE INTO room_members (room_id, user_id) VALUES (?, ?)');
-const stmtGetUserRooms = db.prepare(`
-  SELECT r.room_id, r.room_name 
+const stmtAddUserRoomKey = db.prepare('INSERT OR REPLACE INTO user_room_keys (user_id, room_id, encrypted_passphrase) VALUES (?, ?, ?)');
+const stmtGetUserRoomsWithKeys = db.prepare(`
+  SELECT r.room_id, r.room_name, urk.encrypted_passphrase 
   FROM rooms r 
-  JOIN room_members rm ON r.room_id = rm.room_id 
-  WHERE LOWER(rm.user_id) = LOWER(?)
+  JOIN user_room_keys urk ON r.room_id = urk.room_id 
+  WHERE LOWER(urk.user_id) = LOWER(?)
 `);
 
 const stmtSaveMessage = db.prepare('INSERT INTO messages (room_id, iv, data) VALUES (?, ?, ?)');
@@ -93,7 +94,7 @@ io.on('connection', (socket) => {
       const valid = await bcrypt.compare(password, user.password_hash);
       if (!valid) return socket.emit('auth-error', 'Invalid password.');
 
-      const userRooms = stmtGetUserRooms.all(cleanUserId);
+      const userRooms = stmtGetUserRoomsWithKeys.all(cleanUserId);
       activeSessions.set(socket.id, { userId: cleanUserId, displayName: user.display_name, activeRoom: null });
 
       socket.emit('auth-success', { userId: cleanUserId, displayName: user.display_name, rooms: userRooms });
@@ -103,7 +104,7 @@ io.on('connection', (socket) => {
   });
 
   // Room Action: Create Room
-  socket.on('create-room', ({ userId, roomId, roomName, passphraseHash }) => {
+  socket.on('create-room', ({ userId, roomId, roomName, passphraseHash, encryptedPassphrase }) => {
     try {
       const cleanUserId = userId.trim().toLowerCase();
       const cleanRoomId = roomId.trim();
@@ -113,9 +114,9 @@ io.on('connection', (socket) => {
       }
 
       stmtCreateRoom.run(cleanRoomId, roomName.trim(), passphraseHash);
-      stmtAddMember.run(cleanRoomId, cleanUserId);
+      stmtAddUserRoomKey.run(cleanUserId, cleanRoomId, JSON.stringify(encryptedPassphrase));
 
-      const userRooms = stmtGetUserRooms.all(cleanUserId);
+      const userRooms = stmtGetUserRoomsWithKeys.all(cleanUserId);
       socket.emit('update-rooms', userRooms);
       socket.emit('room-action-success', { roomId: cleanRoomId, roomName: roomName.trim() });
     } catch (err) {
@@ -124,7 +125,7 @@ io.on('connection', (socket) => {
   });
 
   // Room Action: Join Existing Room
-  socket.on('join-room', ({ userId, roomId, passphraseHash }) => {
+  socket.on('join-room', ({ userId, roomId, passphraseHash, encryptedPassphrase }) => {
     try {
       const cleanUserId = userId.trim().toLowerCase();
       const cleanRoomId = roomId.trim();
@@ -133,9 +134,9 @@ io.on('connection', (socket) => {
       if (!room) return socket.emit('room-error', 'Room ID does not exist.');
       if (room.passphrase_hash !== passphraseHash) return socket.emit('room-error', 'Incorrect room passphrase.');
 
-      stmtAddMember.run(cleanRoomId, cleanUserId);
+      stmtAddUserRoomKey.run(cleanUserId, cleanRoomId, JSON.stringify(encryptedPassphrase));
 
-      const userRooms = stmtGetUserRooms.all(cleanUserId);
+      const userRooms = stmtGetUserRoomsWithKeys.all(cleanUserId);
       socket.emit('update-rooms', userRooms);
       socket.emit('room-action-success', { roomId: cleanRoomId, roomName: room.room_name });
     } catch (err) {
