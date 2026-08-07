@@ -55,12 +55,11 @@
     </div>
   </div>
 
-  <!-- MAIN WHATSAPP-STYLE APP WORKSPACE -->
+  <!-- MAIN APP WORKSPACE -->
   <div id="app-screen" class="glass w-full max-w-5xl h-[700px] rounded-2xl shadow-2xl hidden flex-col md:flex-row overflow-hidden border border-slate-800">
     
-    <!-- LEFT SIDEBAR: User Info & Room List -->
+    <!-- LEFT SIDEBAR -->
     <div class="w-full md:w-80 bg-slate-900/90 border-r border-slate-800 flex flex-col">
-      <!-- Profile Header -->
       <div class="p-4 border-b border-slate-800 flex items-center justify-between">
         <div>
           <h3 id="current-user-name" class="font-bold text-sm text-cyan-400"></h3>
@@ -69,18 +68,13 @@
         <button onclick="logout()" class="text-[11px] bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 px-2.5 py-1 rounded-lg">Logout</button>
       </div>
 
-      <!-- Action Buttons -->
       <div class="p-3 grid grid-cols-2 gap-2 border-b border-slate-800 bg-slate-950/40">
         <button onclick="toggleModal('modal-create')" class="py-2 px-2 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 rounded-xl text-xs font-bold transition">+ Create Room</button>
         <button onclick="toggleModal('modal-join')" class="py-2 px-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-xl text-xs font-bold transition">🔗 Join Room</button>
       </div>
 
-      <!-- Joined Rooms List -->
-      <div class="flex-1 overflow-y-auto p-2 space-y-1" id="rooms-list-container">
-        <!-- Dynamic Room Tabs will render here -->
-      </div>
+      <div class="flex-1 overflow-y-auto p-2 space-y-1" id="rooms-list-container"></div>
 
-      <!-- Credit Footer -->
       <div class="p-3 border-t border-slate-800/80 text-center bg-slate-950/30">
         <span class="text-[10px] text-slate-500 font-medium">Developed by Nitin Kumar • RGIPT CSD</span>
       </div>
@@ -88,17 +82,13 @@
 
     <!-- RIGHT CHAT AREA -->
     <div class="flex-1 flex flex-col bg-slate-950/40">
-      
-      <!-- Placeholder when no room is open -->
       <div id="no-chat-selected" class="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-3">
         <div class="text-4xl">💬</div>
         <h3 class="text-lg font-bold text-slate-300">No Room Selected</h3>
         <p class="text-xs text-slate-500 max-w-sm">Select a room from the sidebar or create/join a new group to start messaging.</p>
       </div>
 
-      <!-- Active Chat Container -->
       <div id="chat-wrapper" class="flex-1 flex-col hidden h-full overflow-hidden">
-        <!-- Room Header -->
         <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/60">
           <div>
             <h2 id="active-room-title" class="font-bold text-cyan-400 text-base"></h2>
@@ -107,10 +97,8 @@
           <button onclick="copyActiveRoomId()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg border border-slate-700">📋 Copy Room ID</button>
         </div>
 
-        <!-- Messages Area -->
         <div id="messages" class="flex-1 p-4 overflow-y-auto space-y-3"></div>
 
-        <!-- Reply Preview -->
         <div id="reply-box" class="hidden px-4 py-2 bg-slate-900 border-t border-slate-800 flex items-center justify-between">
           <div class="reply-preview pl-3 text-xs overflow-hidden pr-2">
             <span id="reply-sender" class="font-semibold text-cyan-400 block"></span>
@@ -119,7 +107,6 @@
           <button onclick="cancelReply()" class="text-slate-400 hover:text-white text-sm font-bold">✕</button>
         </div>
 
-        <!-- Image Preview -->
         <div id="image-preview-box" class="hidden px-4 py-2 bg-slate-900 border-t border-slate-800 flex items-center justify-between">
           <div class="flex items-center gap-3">
             <img id="image-preview" class="h-10 w-10 object-cover rounded border border-slate-700" />
@@ -128,7 +115,6 @@
           <button onclick="clearImageAttachment()" class="text-slate-400 hover:text-white text-sm font-bold">✕</button>
         </div>
 
-        <!-- Input Bar -->
         <div class="p-3 border-t border-slate-800 flex gap-2 items-center bg-slate-900/60">
           <label for="img-input" class="cursor-pointer p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700">
             📷
@@ -138,7 +124,6 @@
           <button onclick="sendMessage()" class="px-5 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold rounded-xl text-sm transition">Send</button>
         </div>
       </div>
-
     </div>
   </div>
 
@@ -188,14 +173,13 @@
   <script>
     const socket = io();
     let authMode = 'login';
-    let currentUser = null; // { userId, displayName }
-    let joinedRooms = []; // [{ room_id, room_name }]
-    let activeRoomObj = null; // { roomId, roomName, cryptoKey }
+    let currentUser = null; 
+    let joinedRooms = []; 
+    let activeRoomObj = null; 
     let selectedReply = null;
     let attachedImageBase64 = null;
 
-    // Local Cryptographic Key Cache
-    const roomKeys = new Map(); // roomId -> CryptoKey
+    const roomKeys = new Map();
 
     function switchAuthTab(mode) {
       authMode = mode;
@@ -302,16 +286,14 @@
     async function selectRoom(roomId, roomName) {
       let key = roomKeys.get(roomId);
 
-      // Check if room key is cached locally in localStorage
+      // Check global localStorage cache so passphrase isn't requested again
       if (!key) {
-        let savedPassphrase = localStorage.getItem(`room_pass_${currentUser.userId}_${roomId}`);
+        let savedPassphrase = localStorage.getItem(`cipher_pass_${roomId}`);
         
         if (!savedPassphrase) {
           savedPassphrase = prompt(`Enter encryption passphrase for room "${roomName}":`);
           if (!savedPassphrase) return;
-          
-          // Store locally on first successful input
-          localStorage.setItem(`room_pass_${currentUser.userId}_${roomId}`, savedPassphrase);
+          localStorage.setItem(`cipher_pass_${roomId}`, savedPassphrase);
         }
 
         key = await deriveKey(savedPassphrase, roomId);
@@ -342,8 +324,8 @@
       const passphraseHash = await hashPass(pass);
       const key = await deriveKey(pass, roomId);
       
-      // Save passphrase locally so user doesn't need to re-enter it later
-      localStorage.setItem(`room_pass_${currentUser.userId}_${roomId}`, pass);
+      // Permanently save room passphrase in localStorage
+      localStorage.setItem(`cipher_pass_${roomId}`, pass);
       roomKeys.set(roomId, key);
 
       socket.emit('create-room', { userId: currentUser.userId, roomId, roomName, passphraseHash });
@@ -359,8 +341,8 @@
       const passphraseHash = await hashPass(pass);
       const key = await deriveKey(pass, roomId);
 
-      // Save passphrase locally so user doesn't need to re-enter it later
-      localStorage.setItem(`room_pass_${currentUser.userId}_${roomId}`, pass);
+      // Permanently save room passphrase in localStorage
+      localStorage.setItem(`cipher_pass_${roomId}`, pass);
       roomKeys.set(roomId, key);
 
       socket.emit('join-room', { userId: currentUser.userId, roomId, passphraseHash });
@@ -434,7 +416,7 @@
         const isSelf = data.sender === currentUser.displayName;
         appendMessage(data.sender, data.text, data.image, data.replyTo, isSelf);
       } catch (e) {
-        appendSystemMessage('Decryption failed: Passphrase incorrect.');
+        appendSystemMessage('Decryption failed: Saved passphrase incorrect.');
       }
     }
 
