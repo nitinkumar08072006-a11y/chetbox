@@ -174,12 +174,14 @@
     const socket = io();
     let authMode = 'login';
     let currentUser = null; 
+    let userAccountKey = null; // AES key derived from user's account password
     let joinedRooms = []; 
     let activeRoomObj = null; 
     let selectedReply = null;
     let attachedImageBase64 = null;
 
-    const roomKeys = new Map();
+    const roomPassphraseCache = new Map(); // roomId -> plaintext passphrase
+    const roomKeys = new Map(); // roomId -> AES CryptoKey
 
     function switchAuthTab(mode) {
       authMode = mode;
@@ -219,11 +221,31 @@
       );
     }
 
-    function handleAuthSubmit() {
+    // Encrypt room passphrase using account password key
+    async function encryptString(text, key) {
+      const enc = new TextEncoder();
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const encrypted = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, enc.encode(text));
+      return { iv: Array.from(iv), data: Array.from(new Uint8Array(encrypted)) };
+    }
+
+    // Decrypt room passphrase using account password key
+    async function decryptString(payload, key) {
+      const decrypted = await crypto.subtle.decrypt(
+        { name: "AES-GCM", iv: new Uint8Array(payload.iv) },
+        key,
+        new Uint8Array(payload.data)
+      );
+      return new TextDecoder().decode(decrypted);
+    }
+
+    async function handleAuthSubmit() {
       const userId = document.getElementById('auth-userid').value.trim();
       const password = document.getElementById('auth-password').value;
 
       if (!userId || !password) return alert('Please complete all fields.');
+
+      userAccountKey = await deriveKey(password, userId.toLowerCase());
 
       if (authMode === 'register') {
         const displayName = document.getElementById('auth-name').value.trim();
@@ -237,9 +259,22 @@
     socket.on('auth-error', (msg) => alert(msg));
     socket.on('room-error', (msg) => alert(msg));
 
-    socket.on('auth-success', ({ userId, displayName, rooms }) => {
+    socket.on('auth-success', async ({ userId, displayName, rooms }) => {
       currentUser = { userId, displayName };
       joinedRooms = rooms;
+
+      // Auto-decrypt all synced room passphrases in the background
+      for (const r of rooms) {
+        if (r.encrypted_passphrase) {
+          try {
+            const encObj = JSON.parse(r.encrypted_passphrase);
+            const decryptedPassphrase = await decryptString(encObj, userAccountKey);
+            roomPassphraseCache.set(r.room_id, decryptedPassphrase);
+          } catch (e) {
+            console.error('Failed to decrypt room passphrase', e);
+          }
+        }
+      }
 
       document.getElementById('auth-screen').classList.add('hidden');
       document.getElementById('app-screen').classList.remove('hidden');
@@ -251,8 +286,17 @@
       renderRoomsList();
     });
 
-    socket.on('update-rooms', (rooms) => {
+    socket.on('update-rooms', async (rooms) => {
       joinedRooms = rooms;
+      for (const r of rooms) {
+        if (r.encrypted_passphrase && !roomPassphraseCache.has(r.room_id)) {
+          try {
+            const encObj = JSON.parse(r.encrypted_passphrase);
+            const decryptedPassphrase = await decryptString(encObj, userAccountKey);
+            roomPassphraseCache.set(r.room_id, decryptedPassphrase);
+          } catch (e) {}
+        }
+      }
       renderRoomsList();
     });
 
@@ -286,17 +330,15 @@
     async function selectRoom(roomId, roomName) {
       let key = roomKeys.get(roomId);
 
-      // Check global localStorage cache so passphrase isn't requested again
       if (!key) {
-        let savedPassphrase = localStorage.getItem(`cipher_pass_${roomId}`);
-        
-        if (!savedPassphrase) {
-          savedPassphrase = prompt(`Enter encryption passphrase for room "${roomName}":`);
-          if (!savedPassphrase) return;
-          localStorage.setItem(`cipher_pass_${roomId}`, savedPassphrase);
+        let passphrase = roomPassphraseCache.get(roomId);
+        if (!passphrase) {
+          passphrase = prompt(`Enter encryption passphrase for room "${roomName}":`);
+          if (!passphrase) return;
+          roomPassphraseCache.set(roomId, passphrase);
         }
 
-        key = await deriveKey(savedPassphrase, roomId);
+        key = await deriveKey(passphrase, roomId);
         roomKeys.set(roomId, key);
       }
 
@@ -323,12 +365,18 @@
 
       const passphraseHash = await hashPass(pass);
       const key = await deriveKey(pass, roomId);
-      
-      // Permanently save room passphrase in localStorage
-      localStorage.setItem(`cipher_pass_${roomId}`, pass);
+      const encryptedPassphrase = await encryptString(pass, userAccountKey);
+
+      roomPassphraseCache.set(roomId, pass);
       roomKeys.set(roomId, key);
 
-      socket.emit('create-room', { userId: currentUser.userId, roomId, roomName, passphraseHash });
+      socket.emit('create-room', { 
+        userId: currentUser.userId, 
+        roomId, 
+        roomName, 
+        passphraseHash, 
+        encryptedPassphrase 
+      });
       toggleModal('modal-create');
     }
 
@@ -340,12 +388,17 @@
 
       const passphraseHash = await hashPass(pass);
       const key = await deriveKey(pass, roomId);
+      const encryptedPassphrase = await encryptString(pass, userAccountKey);
 
-      // Permanently save room passphrase in localStorage
-      localStorage.setItem(`cipher_pass_${roomId}`, pass);
+      roomPassphraseCache.set(roomId, pass);
       roomKeys.set(roomId, key);
 
-      socket.emit('join-room', { userId: currentUser.userId, roomId, passphraseHash });
+      socket.emit('join-room', { 
+        userId: currentUser.userId, 
+        roomId, 
+        passphraseHash, 
+        encryptedPassphrase 
+      });
       toggleModal('modal-join');
     }
 
@@ -416,7 +469,7 @@
         const isSelf = data.sender === currentUser.displayName;
         appendMessage(data.sender, data.text, data.image, data.replyTo, isSelf);
       } catch (e) {
-        appendSystemMessage('Decryption failed: Saved passphrase incorrect.');
+        appendSystemMessage('Decryption failed: Passphrase incorrect.');
       }
     }
 
