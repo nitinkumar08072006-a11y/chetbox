@@ -28,8 +28,8 @@
 
     <!-- Mode Selector Tabs -->
     <div class="grid grid-cols-2 gap-2 bg-slate-900/80 p-1 rounded-xl border border-slate-700">
-      <button id="tab-create" onclick="switchTab('create')" class="py-2 text-xs font-bold rounded-lg bg-cyan-500 text-slate-950 transition">Create Room</button>
-      <button id="tab-join" onclick="switchTab('join')" class="py-2 text-xs font-bold rounded-lg text-slate-400 hover:text-white transition">Join Room</button>
+      <button id="tab-create" type="button" onclick="switchTab('create')" class="py-2 text-xs font-bold rounded-lg bg-cyan-500 text-slate-950 transition">Create Room</button>
+      <button id="tab-join" type="button" onclick="switchTab('join')" class="py-2 text-xs font-bold rounded-lg text-slate-400 hover:text-white transition">Join Room</button>
     </div>
 
     <!-- Form Container -->
@@ -49,7 +49,7 @@
         <input type="password" id="password" placeholder="Enter Secret Passphrase" class="w-full mt-1 px-4 py-2.5 bg-slate-900/90 rounded-xl border border-slate-700 focus:outline-none focus:border-cyan-500 text-sm transition" />
       </div>
 
-      <button id="submit-btn" onclick="handleAuthSubmit()" class="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 rounded-xl font-bold text-sm tracking-wide shadow-lg shadow-cyan-500/20 transition duration-200">
+      <button id="submit-btn" type="button" onclick="handleAuthSubmit()" class="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 rounded-xl font-bold text-sm tracking-wide shadow-lg shadow-cyan-500/20 transition duration-200">
         Create & Launch Room
       </button>
     </div>
@@ -62,7 +62,7 @@
       <div>
         <div class="flex items-center gap-2">
           <h2 id="room-display" class="font-bold text-lg text-cyan-400"></h2>
-          <span class="text-[10px] bg-cyan-950 text-cyan-300 px-2 py-0.5 rounded border border-cyan-800/50">RGIPT CSD Engine</span>
+          <button onclick="copyRoomDetails()" class="text-[10px] bg-cyan-950 hover:bg-cyan-900 text-cyan-300 px-2 py-0.5 rounded border border-cyan-800/50 transition">📋 Copy Room ID</button>
         </div>
         <span id="status-badge" class="text-xs px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-500/30">Connecting...</span>
       </div>
@@ -167,12 +167,17 @@
       }
     }
 
-    socket.on('joined', ({ room }) => {
+    socket.on('joined', ({ room, isHost }) => {
       document.getElementById('auth-card').classList.add('hidden');
       document.getElementById('chat-card').classList.remove('hidden');
       document.getElementById('chat-card').classList.add('flex');
       document.getElementById('room-display').innerText = `# ${room}`;
-      appendSystemMessage(`Welcome ${myName}! AES-256 encrypted session initialized.`);
+
+      if (isHost) {
+        appendSystemMessage(`Room created successfully! Share Room ID "${room}" and your passphrase with your friends.`);
+      } else {
+        appendSystemMessage(`Joined room successfully! AES-256 encrypted session initialized.`);
+      }
     });
 
     socket.on('error-msg', (msg) => alert(msg));
@@ -182,12 +187,17 @@
       badge.className = "text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
       badge.innerText = `Active Members (${count}/10)`;
 
-      if (status === 'connected' && user) {
+      if (status === 'connected' && user && user !== myName) {
         appendSystemMessage(`${user} joined the room.`);
       } else if (status === 'disconnected' && user) {
         appendSystemMessage(`${user} left the room.`);
       }
     });
+
+    function copyRoomDetails() {
+      navigator.clipboard.writeText(activeRoom);
+      alert(`Room ID "${activeRoom}" copied to clipboard! Share it and your passphrase with your friends.`);
+    }
 
     function handleImageSelect(e) {
       const file = e.target.files[0];
