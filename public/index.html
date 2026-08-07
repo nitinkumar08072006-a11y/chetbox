@@ -194,7 +194,7 @@
     let selectedReply = null;
     let attachedImageBase64 = null;
 
-    // Local Storage Cryptographic Key Caching
+    // Local Cryptographic Key Cache
     const roomKeys = new Map(); // roomId -> CryptoKey
 
     function switchAuthTab(mode) {
@@ -301,10 +301,20 @@
 
     async function selectRoom(roomId, roomName) {
       let key = roomKeys.get(roomId);
+
+      // Check if room key is cached locally in localStorage
       if (!key) {
-        const passphrase = prompt(`Enter encryption passphrase for room "${roomName}":`);
-        if (!passphrase) return;
-        key = await deriveKey(passphrase, roomId);
+        let savedPassphrase = localStorage.getItem(`room_pass_${currentUser.userId}_${roomId}`);
+        
+        if (!savedPassphrase) {
+          savedPassphrase = prompt(`Enter encryption passphrase for room "${roomName}":`);
+          if (!savedPassphrase) return;
+          
+          // Store locally on first successful input
+          localStorage.setItem(`room_pass_${currentUser.userId}_${roomId}`, savedPassphrase);
+        }
+
+        key = await deriveKey(savedPassphrase, roomId);
         roomKeys.set(roomId, key);
       }
 
@@ -331,6 +341,9 @@
 
       const passphraseHash = await hashPass(pass);
       const key = await deriveKey(pass, roomId);
+      
+      // Save passphrase locally so user doesn't need to re-enter it later
+      localStorage.setItem(`room_pass_${currentUser.userId}_${roomId}`, pass);
       roomKeys.set(roomId, key);
 
       socket.emit('create-room', { userId: currentUser.userId, roomId, roomName, passphraseHash });
@@ -345,6 +358,9 @@
 
       const passphraseHash = await hashPass(pass);
       const key = await deriveKey(pass, roomId);
+
+      // Save passphrase locally so user doesn't need to re-enter it later
+      localStorage.setItem(`room_pass_${currentUser.userId}_${roomId}`, pass);
       roomKeys.set(roomId, key);
 
       socket.emit('join-room', { userId: currentUser.userId, roomId, passphraseHash });
