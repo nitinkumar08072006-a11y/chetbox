@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>CipherRoom | Nitin Kumar (RGIPT CSD)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
@@ -13,7 +13,7 @@
     .reply-preview { border-left: 3px solid #06b6d4; }
   </style>
 </head>
-<body class="text-slate-100 min-h-screen flex items-center justify-center p-2 sm:p-4 font-sans">
+<body class="text-slate-100 h-[100dvh] w-screen flex items-center justify-center p-2 sm:p-4 font-sans overflow-hidden">
 
   <!-- AUTH SECTION -->
   <div id="auth-screen" class="glass w-full max-w-md p-6 sm:p-8 rounded-2xl shadow-2xl space-y-6">
@@ -56,11 +56,11 @@
   </div>
 
   <!-- MAIN APP WORKSPACE -->
-  <div id="app-screen" class="glass w-full max-w-5xl h-[700px] rounded-2xl shadow-2xl hidden flex-col md:flex-row overflow-hidden border border-slate-800">
+  <div id="app-screen" class="glass w-full max-w-5xl h-full md:h-[700px] max-h-[100dvh] rounded-2xl shadow-2xl hidden flex-col md:flex-row overflow-hidden border border-slate-800">
     
     <!-- LEFT SIDEBAR -->
-    <div class="w-full md:w-80 bg-slate-900/90 border-r border-slate-800 flex flex-col">
-      <div class="p-4 border-b border-slate-800 flex items-center justify-between">
+    <div class="w-full md:w-80 bg-slate-900/90 border-r border-slate-800 flex flex-col shrink-0 max-h-[35%] md:max-h-full">
+      <div class="p-3 sm:p-4 border-b border-slate-800 flex items-center justify-between shrink-0">
         <div>
           <h3 id="current-user-name" class="font-bold text-sm text-cyan-400"></h3>
           <p id="current-user-id" class="text-[11px] text-slate-400"></p>
@@ -68,28 +68,28 @@
         <button onclick="logout()" class="text-[11px] bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 px-2.5 py-1 rounded-lg">Logout</button>
       </div>
 
-      <div class="p-3 grid grid-cols-2 gap-2 border-b border-slate-800 bg-slate-950/40">
+      <div class="p-2 sm:p-3 grid grid-cols-2 gap-2 border-b border-slate-800 bg-slate-950/40 shrink-0">
         <button onclick="toggleModal('modal-create')" class="py-2 px-2 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 rounded-xl text-xs font-bold transition">+ Create Room</button>
         <button onclick="toggleModal('modal-join')" class="py-2 px-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-xl text-xs font-bold transition">🔗 Join Room</button>
       </div>
 
       <div class="flex-1 overflow-y-auto p-2 space-y-1" id="rooms-list-container"></div>
 
-      <div class="p-3 border-t border-slate-800/80 text-center bg-slate-950/30">
+      <div class="p-2 sm:p-3 border-t border-slate-800/80 text-center bg-slate-950/30 shrink-0 hidden md:block">
         <span class="text-[10px] text-slate-500 font-medium">Developed by Nitin Kumar • RGIPT CSD</span>
       </div>
     </div>
 
     <!-- RIGHT CHAT AREA -->
-    <div class="flex-1 flex flex-col bg-slate-950/40">
+    <div class="flex-1 flex flex-col bg-slate-950/40 min-h-0 h-full">
       <div id="no-chat-selected" class="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-3">
         <div class="text-4xl">💬</div>
         <h3 class="text-lg font-bold text-slate-300">No Room Selected</h3>
         <p class="text-xs text-slate-500 max-w-sm">Select a room from the sidebar or create/join a new group to start messaging.</p>
       </div>
 
-      <div id="chat-wrapper" class="flex-1 flex-col hidden h-full overflow-hidden">
-        <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/60">
+      <div id="chat-wrapper" class="flex-1 flex flex-col hidden h-full min-h-0 overflow-hidden">
+        <div class="p-3 sm:p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/60 shrink-0">
           <div>
             <h2 id="active-room-title" class="font-bold text-cyan-400 text-base"></h2>
             <p id="active-room-sub" class="text-[11px] text-slate-400"></p>
@@ -97,9 +97,9 @@
           <button onclick="copyActiveRoomId()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg border border-slate-700">📋 Copy Room ID</button>
         </div>
 
-        <div id="messages" class="flex-1 p-4 overflow-y-auto space-y-3"></div>
+        <div id="messages" class="flex-1 p-3 sm:p-4 overflow-y-auto space-y-3 min-h-0"></div>
 
-        <div id="reply-box" class="hidden px-4 py-2 bg-slate-900 border-t border-slate-800 flex items-center justify-between">
+        <div id="reply-box" class="hidden px-4 py-2 bg-slate-900 border-t border-slate-800 flex items-center justify-between shrink-0">
           <div class="reply-preview pl-3 text-xs overflow-hidden pr-2">
             <span id="reply-sender" class="font-semibold text-cyan-400 block"></span>
             <span id="reply-text" class="text-slate-300 truncate block"></span>
@@ -107,7 +107,7 @@
           <button onclick="cancelReply()" class="text-slate-400 hover:text-white text-sm font-bold">✕</button>
         </div>
 
-        <div id="image-preview-box" class="hidden px-4 py-2 bg-slate-900 border-t border-slate-800 flex items-center justify-between">
+        <div id="image-preview-box" class="hidden px-4 py-2 bg-slate-900 border-t border-slate-800 flex items-center justify-between shrink-0">
           <div class="flex items-center gap-3">
             <img id="image-preview" class="h-10 w-10 object-cover rounded border border-slate-700" />
             <span class="text-xs text-slate-300">Photo ready to send</span>
@@ -115,20 +115,21 @@
           <button onclick="clearImageAttachment()" class="text-slate-400 hover:text-white text-sm font-bold">✕</button>
         </div>
 
-        <div class="p-3 border-t border-slate-800 flex gap-2 items-center bg-slate-900/60">
-          <label for="img-input" class="cursor-pointer p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700">
+        <!-- INPUT BAR FIXED AT BOTTOM -->
+        <div class="p-2 sm:p-3 border-t border-slate-800 flex gap-2 items-center bg-slate-900/90 shrink-0">
+          <label for="img-input" class="cursor-pointer p-2 sm:p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700 shrink-0">
             📷
             <input type="file" id="img-input" accept="image/*" class="hidden" onchange="handleImageSelect(event)" />
           </label>
-          <input type="text" id="msg-input" placeholder="Type an encrypted message..." onkeydown="if(event.key==='Enter') sendMessage()" class="flex-1 px-4 py-2.5 bg-slate-950/80 rounded-xl border border-slate-800 focus:outline-none focus:border-cyan-500 text-sm" />
-          <button onclick="sendMessage()" class="px-5 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold rounded-xl text-sm transition">Send</button>
+          <input type="text" id="msg-input" placeholder="Type an encrypted message..." onkeydown="if(event.key==='Enter') sendMessage()" class="flex-1 min-w-0 px-3 sm:px-4 py-2 sm:py-2.5 bg-slate-950/80 rounded-xl border border-slate-800 focus:outline-none focus:border-cyan-500 text-sm" />
+          <button onclick="sendMessage()" class="px-4 sm:px-5 py-2 sm:py-2.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold rounded-xl text-sm transition shrink-0">Send</button>
         </div>
       </div>
     </div>
   </div>
 
   <!-- MODAL: CREATE ROOM -->
-  <div id="modal-create" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden items-center justify-center p-4">
+  <div id="modal-create" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
     <div class="glass w-full max-w-sm p-6 rounded-2xl space-y-4">
       <h3 class="text-lg font-bold text-cyan-400">Create New Room</h3>
       <div>
@@ -151,7 +152,7 @@
   </div>
 
   <!-- MODAL: JOIN ROOM -->
-  <div id="modal-join" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden items-center justify-center p-4">
+  <div id="modal-join" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
     <div class="glass w-full max-w-sm p-6 rounded-2xl space-y-4">
       <h3 class="text-lg font-bold text-cyan-400">Join Existing Room</h3>
       <div>
@@ -221,7 +222,6 @@
       );
     }
 
-    // Encrypt room passphrase using account password key
     async function encryptString(text, key) {
       const enc = new TextEncoder();
       const iv = crypto.getRandomValues(new Uint8Array(12));
@@ -229,7 +229,6 @@
       return { iv: Array.from(iv), data: Array.from(new Uint8Array(encrypted)) };
     }
 
-    // Decrypt room passphrase using account password key
     async function decryptString(payload, key) {
       const decrypted = await crypto.subtle.decrypt(
         { name: "AES-GCM", iv: new Uint8Array(payload.iv) },
@@ -263,7 +262,6 @@
       currentUser = { userId, displayName };
       joinedRooms = rooms;
 
-      // Auto-decrypt all synced room passphrases in the background
       for (const r of rooms) {
         if (r.encrypted_passphrase) {
           try {
