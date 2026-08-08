@@ -12,6 +12,7 @@ const io = new Server(server, {
 
 // Database Setup
 const db = new Database('chat.db');
+db.pragma('foreign_keys = ON'); // Enable foreign key constraints
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
@@ -31,8 +32,8 @@ db.exec(`
     room_id TEXT,
     encrypted_passphrase TEXT NOT NULL,
     PRIMARY KEY (user_id, room_id),
-    FOREIGN KEY(user_id) REFERENCES users(user_id),
-    FOREIGN KEY(room_id) REFERENCES rooms(room_id)
+    FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY(room_id) REFERENCES rooms(room_id) ON DELETE CASCADE
   );
 
   CREATE TABLE IF NOT EXISTS messages (
@@ -41,7 +42,7 @@ db.exec(`
     iv TEXT NOT NULL,
     data TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(room_id) REFERENCES rooms(room_id)
+    FOREIGN KEY(room_id) REFERENCES rooms(room_id) ON DELETE CASCADE
   );
 `);
 
@@ -72,13 +73,24 @@ io.on('connection', (socket) => {
   // Auth: Register
   socket.on('register', async ({ userId, displayName, password }) => {
     try {
+      if (!userId || !password || !displayName) {
+        return socket.emit('auth-error', 'All fields are required.');
+      }
+
       const cleanUserId = userId.trim().toLowerCase();
+      const cleanDisplayName = displayName.trim();
+
       if (stmtGetUser.get(cleanUserId)) {
         return socket.emit('auth-error', 'User ID already taken. Choose another.');
       }
+
       const hash = await bcrypt.hash(password, 10);
-      stmtCreateUser.run(cleanUserId, hash, displayName.trim());
-      socket.emit('auth-success', { userId: cleanUserId, displayName: displayName.trim(), rooms: [] });
+      stmtCreateUser.run(cleanUserId, hash, cleanDisplayName);
+
+      // FIX: Store session on registration so the socket is instantly authenticated
+      activeSessions.set(socket.id, { userId: cleanUserId, displayName: cleanDisplayName, activeRoom: null });
+
+      socket.emit('auth-success', { userId: cleanUserId, displayName: cleanDisplayName, rooms: [] });
     } catch (err) {
       socket.emit('auth-error', 'Registration failed: ' + err.message);
     }
@@ -87,14 +99,21 @@ io.on('connection', (socket) => {
   // Auth: Login
   socket.on('login', async ({ userId, password }) => {
     try {
+      if (!userId || !password) {
+        return socket.emit('auth-error', 'User ID and password are required.');
+      }
+
       const cleanUserId = userId.trim().toLowerCase();
       const user = stmtGetUser.get(cleanUserId);
+
       if (!user) return socket.emit('auth-error', 'User ID not found.');
 
       const valid = await bcrypt.compare(password, user.password_hash);
       if (!valid) return socket.emit('auth-error', 'Invalid password.');
 
       const userRooms = stmtGetUserRoomsWithKeys.all(cleanUserId);
+
+      // Store session on login
       activeSessions.set(socket.id, { userId: cleanUserId, displayName: user.display_name, activeRoom: null });
 
       socket.emit('auth-success', { userId: cleanUserId, displayName: user.display_name, rooms: userRooms });
@@ -147,7 +166,7 @@ io.on('connection', (socket) => {
   // Open Room Chat
   socket.on('open-room', ({ roomId }) => {
     const session = activeSessions.get(socket.id);
-    if (!session) return;
+    if (!session) return socket.emit('room-error', 'Session expired. Please log in again.');
 
     if (session.activeRoom) {
       socket.leave(session.activeRoom);
@@ -167,8 +186,12 @@ io.on('connection', (socket) => {
 
   // Relay & Save Message
   socket.on('send-message', ({ roomId, payload }) => {
-    stmtSaveMessage.run(roomId, JSON.stringify(payload.iv), JSON.stringify(payload.data));
-    socket.to(roomId).emit('receive-message', { roomId, payload });
+    try {
+      stmtSaveMessage.run(roomId, JSON.stringify(payload.iv), JSON.stringify(payload.data));
+      socket.to(roomId).emit('receive-message', { roomId, payload });
+    } catch (err) {
+      console.error('Error saving message:', err);
+    }
   });
 
   // Disconnect Handler
@@ -179,3 +202,4 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`🚀 CipherRoom running on http://localhost:${PORT}`));
+
